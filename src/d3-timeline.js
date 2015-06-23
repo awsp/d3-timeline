@@ -41,8 +41,13 @@
     function timeline (gParent) {
       var g = gParent.append("g");
       var gParentSize = gParent[0][0].getBoundingClientRect();
-
       var gParentItem = d3.select(gParent[0][0]);
+
+      // awsp start
+      var r = gParent.append("g");
+      r.append("svg:rect").attr("width", 0 + margin.left).attr("height", 200).attr("fill", "white");
+      console.log(gParentItem.attr("height"));
+      // awsp end
 
       var yAxisMapping = {},
         maxStack = 1,
@@ -178,18 +183,42 @@
             .attr("cx", getXPos)
             .attr("r", itemHeight / 2)
             .attr("height", itemHeight)
-            .style("fill", function(d, i){
-              var dColorPropName;
-              if (d.color) return d.color;
-              if( colorPropertyName ){
-                dColorPropName = d[colorPropertyName];
-                if ( dColorPropName ) {
-                  return colorCycle( dColorPropName );
-                } else {
-                  return colorCycle( datum[colorPropertyName] );
-                }
+            .attr("rx", function (d) {
+              if (d.hasOwnProperty('type')) {
+                return d.type.rx || 0;
               }
-              return colorCycle(index);
+              return 0;
+            })
+            .attr("ry", function (d) {
+              if (d.hasOwnProperty('type')) {
+                return d.type.ry || 0;
+              }
+              return 0;
+            })
+            .style("fill-opacity", function (d) {
+              if (d.hasOwnProperty('type')) {
+                return d.type.opacity || 1;
+              }
+              return 1;
+            })
+            .style("fill", function(d, i){
+              if (d.hasOwnProperty('type') && d.type.hasOwnProperty('fill')) {
+                return d.type.fill;
+              }
+              else {
+                var dColorPropName;
+                if (d.color) return d.color;
+                if (colorPropertyName) {
+                  dColorPropName = d[colorPropertyName];
+                  if (dColorPropName) {
+                    return colorCycle(dColorPropName);
+                  }
+                  else {
+                    return colorCycle(datum[colorPropertyName]);
+                  }
+                }
+                return colorCycle(index);
+              }
             })
             .on("mousemove", function (d, i) {
               hover(d, index, datum);
@@ -204,7 +233,13 @@
               click(d, index, datum);
             })
             .attr("class", function (d, i) {
-              return datum.class ? "timelineSeries_"+datum.class : "timelineSeries_"+index;
+              var classString = "";
+              classString = datum.class ? "timelineSeries_" + datum.class : "timelineSeries_" + index;
+
+              if (d.hasOwnProperty('type') && d.type.class) {
+                classString += " " + d.type.class;
+              }
+              return classString;
             })
             .attr("id", function(d, i) {
               // use deprecated id field
@@ -223,6 +258,9 @@
             .text(function(d) {
               return d.label;
             })
+            .attr("class", function (d, i) {
+              return d.class;
+            })
           ;
 
           if (rowSeperatorsColor) {
@@ -240,7 +278,7 @@
 
           // add the label
           if (hasLabel) {
-            gParent.append("text")
+            r.append("text")
               .attr("class", "timeline-label")
               .attr("transform", "translate("+ 0 +","+ (itemHeight * 0.75 + margin.top + (itemHeight + itemMargin) * yAxisMapping[index])+")")
               .text(hasLabel ? getLabel(datum.label) : datum.id)
@@ -346,16 +384,16 @@
 
       function setWidth() {
         if (!width && !gParentSize.width) {
-          try { 
+          try {
             width = gParentItem.attr("width");
             if (!width) {
               throw "width of the timeline is not set. As of Firefox 27, timeline().with(x) needs to be explicitly set in order to render";
-            }            
+            }
           } catch (err) {
             console.log( err );
           }
         } else if (!(width && gParentSize.width)) {
-          try { 
+          try {
             width = gParentItem.attr("width");
           } catch (err) {
             console.log( err );
